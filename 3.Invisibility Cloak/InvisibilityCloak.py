@@ -1,30 +1,63 @@
+# ==============================
+# 라이브러리 import
+# ==============================
 import cv2
 import numpy as np
+# python에서는 CLI argument를 처리하기 위해 argparse 모듈을 제공
 import time, argparse
 
+# ==============================
+# 저장된 동영상 파일 불러오기
+# ==============================
+
+# 터미널에서 python 파일을 실행할 때 명령어에 대한 옵션을 parameter로 전달할 때 사용
 # 인자값을 받아 처리하는 로직
 parser = argparse.ArgumentParser()
 # 입력받을 인자값을 등록
-parser.add_argument('--video', help='Input video path')
+# add_argument의 help 옵션은 인자가 하는 일에 대한 간단한 설명을 의미한다.
+# command line에서 python 파일을 실행할 때, [python 파일명].py --video [video 파일 경로] 입력 시
+# 저장된 동영상 파일을 불러와서 작업할 수 있다.
+parser.add_argument("--video", help='Input video path')
 # 입력받은 인자값을 args에 저장
 args = parser.parse_args()
 
-# 영상이 존재하면 사용하고 없을 경우 웹캠을 사용한다.
+# command line에서 입력받은 경로에 영상이 존재하면 사용하고 없을 경우 웹캠을 사용한다.
 cap = cv2.VideoCapture(args.video if args.video else 0)
 
-# 웹캠이 켜지는데 시간이 소요되므로 3초간 timesleep을 준다.
+# 웹캠을 사용할 경우, 웹캠이 켜지는데 시간이 소요되므로 3초간 timesleep을 준다.
 time.sleep(3)
 
 # 사전 준비 : 동영상의 앞 2~5초 정도는 사람없이 배경만 존재하도록 한다.
 # Grap background image from first part of the video
 # 60 frame에 대해서 사람이 없는 배경을 저장한다.
 for i in range(60):
+  # 읽은 프레임을 background에 저장하고, 
+  # 비디오 프레임을 제대로 읽은 경우 ret = True, 아니면 False
   ret, background = cap.read()
+print(background.shape) # (480, 852, 3)
 
+# ==============================
+# 결과 동영상 저장 객체 생성하기
+# ==============================
+
+# 영상을 저장하기 위해 cv2.VideoWriter 객체를 생성
+# fourcc는 Codec 정보를 저장 (MP4V는 MPEG-4의 약자)
 fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+
+# cv2.VideoWriter([저장 파일명], Codec정보, 초당 저장될 frame, 저장될 사이즈)
+# 카메라 또는 영상의 속성을 확인하기 위해 cap.get(id) 사용
+# cv2.CAP_PROP_FPS : 초당 프레임 수
+# 영상 저장될 사이즈(list) 예 : (640, 480)
 out = cv2.VideoWriter('videos/output.mp4', fourcc, cap.get(cv2.CAP_PROP_FPS), (background.shape[1], background.shape[0]))
 out2 = cv2.VideoWriter('videos/original.mp4', fourcc, cap.get(cv2.CAP_PROP_FPS), (background.shape[1], background.shape[0]))
 
+# ==============================
+# 연속된 동영상 읽기
+# ==============================
+
+# 동영상의 첫 frame만 cap에 담기게 되는데, cap객체가 지정한 파일로 정상적으로 초기화가 된 경우
+# while 문을 통해 무한루프를 돌면서 연속된 프레임을 읽을 수 있고
+# frame을 정상적으로 읽었다면 ret은 True, frame은 img 변수에 담는다. 
 while(cap.isOpened()):
   ret, img = cap.read()
   if not ret:

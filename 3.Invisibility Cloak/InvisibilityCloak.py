@@ -48,8 +48,9 @@ fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
 # 카메라 또는 영상의 속성을 확인하기 위해 cap.get(id) 사용
 # cv2.CAP_PROP_FPS : 초당 프레임 수
 # 영상 저장될 사이즈(list) 예 : (640, 480)
-out = cv2.VideoWriter('videos/output.mp4', fourcc, cap.get(cv2.CAP_PROP_FPS), (background.shape[1], background.shape[0]))
-out2 = cv2.VideoWriter('videos/original.mp4', fourcc, cap.get(cv2.CAP_PROP_FPS), (background.shape[1], background.shape[0]))
+out1 = cv2.VideoWriter('result.mp4', fourcc, cap.get(cv2.CAP_PROP_FPS), (background.shape[1], background.shape[0]))
+out2 = cv2.VideoWriter('remove_red.mp4', fourcc, cap.get(cv2.CAP_PROP_FPS), (background.shape[1], background.shape[0]))
+#out3 = cv2.VideoWriter('mask.mp4', fourcc, cap.get(cv2.CAP_PROP_FPS), (background.shape[1], background.shape[0]))
 
 # ==============================
 # 연속된 동영상 읽기
@@ -63,15 +64,25 @@ while(cap.isOpened()):
   if not ret:
     break
   
+  # ==============================
+  # HSV Color System
+  # openCV에서는 Hue [0,179] / Saturation, Value [0,255]로 정의한다.
+  # ==============================
+
   # Convert the color space from BGR to HSV
   # 컬러 시스템에서 HSV가 사람이 인식하는 것과 유사하다.
+  # cv2.cvtColor() : 색상 공간을 변환할 때 사용
+  # cv2.cvtColor([입력이미지], [색상변환코드]), 결과는 matrix
   hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+  #print("==hsv==",hsv)
 
   # Generate mask to detect red color
   # 빨간색을 추출하여 mask를 생성한다.
-  # HSV 시스테에서는 빨간색 영역이 2개이므로 각각 구하여 더한다.
+  # HSV 시스테에서는 빨간색 영역이 2개이므로 mask를 각각 생성한 뒤 더한다.
   lower_red = np.array([0, 120, 70])
   upper_red = np.array([10, 255, 255])
+  # cv2.inRange 특정 색상 영역을 추출
+  # cv2.inRange([입력행렬], [하한값 행렬], [상한값 행렬])
   mask1 = cv2.inRange(hsv, lower_red, upper_red)
 
   lower_red = np.array([170, 120, 70])
@@ -89,11 +100,12 @@ while(cap.isOpened()):
   https://docs.opencv.org/3.0-beta/doc/py_tutorials/py_imgproc/py_morphological_ops/py_morphological_ops.html
   '''
   # Remove noise
+  # 모폴로지 연산 : 다양한 영상 처리 시스템에서 전처리 또는 후처리 형태
   mask_cloak = cv2.morphologyEx(mask1, op=cv2.MORPH_OPEN, kernel=np.ones((3, 3), np.uint8), iterations=2)
   mask_cloak = cv2.dilate(mask_cloak, kernel=np.ones((3, 3), np.uint8), iterations=1)
   mask_bg = cv2.bitwise_not(mask_cloak)
 
-  cv2.imshow('mask_cloak', mask_cloak)
+  cv2.imshow('mask_cloak1', mask_cloak)
 
   # Generate the final output
   res1 = cv2.bitwise_and(background, background, mask=mask_cloak)
@@ -105,12 +117,15 @@ while(cap.isOpened()):
 
   # cv2.imshow('ori', img)
   cv2.imshow('result', result)
-  out.write(result)
-  out2.write(img)
+  out1.write(result)      # 최종결과 영상
+  out2.write(res1)        # Red 영역 지운 영상
+  #out3.write(mask_cloak)  # mask 
 
+  # 'q' 키가 눌리면 정지
   if cv2.waitKey(1) == ord('q'):
     break
 
-out.release()
+out1.release()
 out2.release()
+#out3.release()
 cap.release()
